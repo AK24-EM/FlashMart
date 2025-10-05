@@ -1,0 +1,907 @@
+/**
+ * Business Metrics Service
+ *
+ * Handles advanced business analytics including RFM segmentation,
+ * Customer Lifetime Value (CLV), and Net Promoter Score (NPS)
+ * using Firebase Firestore for real-time data processing.
+ */
+
+class BusinessMetricsService {
+    constructor() {
+        this.db = null;
+        this.cache = new Map();
+        this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+        this.realTimeListeners = new Map();
+    }
+
+    /**
+     * Initialize the business metrics service
+     */
+    async initialize(db) {
+        if (!db) {
+            throw new Error('Database instance is required for Business Metrics Service');
+        }
+
+        this.db = db;
+        console.log('📊 Business Metrics Service initialized');
+
+        // Set up real-time listeners for key metrics
+        await this.setupRealTimeListeners();
+    }
+
+    /**
+     * Set up real-time listeners for dashboard metrics
+     */
+    async setupRealTimeListeners() {
+        try {
+            // Listen for new orders to update metrics in real-time
+            this.db.collection('orders')
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added' || change.type === 'modified') {
+                            this.invalidateCache(['orders', 'revenue', 'clv', 'rfm']);
+                            this.updateDashboardMetrics();
+                        }
+                    });
+                });
+
+            // Listen for user changes
+            this.db.collection('users')
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added' || change.type === 'modified') {
+                            this.invalidateCache(['users', 'rfm', 'clv', 'nps']);
+                        }
+                    });
+                });
+
+            // Listen for NPS responses
+            this.db.collection('nps_responses')
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added' || change.type === 'modified') {
+                            this.invalidateCache(['nps']);
+                        }
+                    });
+                });
+
+            console.log('✅ Real-time listeners setup completed');
+        } catch (error) {
+            console.error('❌ Failed to setup real-time listeners:', error);
+        }
+    }
+
+    /**
+     * Get comprehensive business metrics dashboard data
+     */
+    async getBusinessMetricsDashboard() {
+        if (!this.db) {
+            throw new Error('Business Metrics Service not initialized');
+        }
+
+        const cacheKey = 'business_dashboard';
+        const cached = this.getCachedData(cacheKey);
+        if (cached) return cached;
+
+        try {
+            const [revenueMetrics, customerMetrics, productMetrics, rfmAnalysis, npsData] = await Promise.all([
+                this.getRevenueMetrics(),
+                this.getCustomerMetrics(),
+                this.getProductMetrics(),
+                this.getRFMAnalysis(),
+                this.getNPSData()
+            ]);
+
+            const dashboardData = {
+                timestamp: new Date(),
+                revenue: revenueMetrics,
+                customers: customerMetrics,
+                products: productMetrics,
+                rfm: rfmAnalysis,
+                nps: npsData,
+                summary: this.generateSummaryMetrics(revenueMetrics, customerMetrics, rfmAnalysis, npsData)
+            };
+
+            this.setCachedData(cacheKey, dashboardData);
+            return dashboardData;
+
+        } catch (error) {
+            console.error('❌ Error getting business metrics dashboard:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get revenue metrics using Firebase aggregation
+     */
+    async getRevenueMetrics() {
+        const cacheKey = 'revenue_metrics';
+        const cached = this.getCachedData(cacheKey);
+        if (cached) return cached;
+
+        try {
+            const ordersRef = this.db.collection('orders');
+            const now = new Date();
+            const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+
+            // Get all orders for calculations
+            const [allOrdersSnapshot, monthlyOrdersSnapshot, weeklyOrdersSnapshot] = await Promise.all([
+                ordersRef.get(),
+                ordersRef.where('createdAt', '>=', thirtyDaysAgo).get(),
+                ordersRef.where('createdAt', '>=', sevenDaysAgo).get()
+            ]);
+
+            const allOrders = allOrdersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const monthlyOrders = monthlyOrdersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const weeklyOrders = weeklyOrdersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Calculate total revenue
+            const totalRevenue = allOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+            const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+            const weeklyRevenue = weeklyOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+
+            // Calculate average order value
+            const avgOrderValue = allOrders.length > 0 ? totalRevenue / allOrders.length : 0;
+
+            // Calculate growth rates
+            const previousMonthRevenue = await this.getPreviousPeriodRevenue('month');
+            const previousWeekRevenue = await this.getPreviousPeriodRevenue('week');
+            const monthlyGrowth = previousMonthRevenue > 0 ? ((monthlyRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 : 0;
+            const weeklyGrowth = previousWeekRevenue > 0 ? ((weeklyRevenue - previousWeekRevenue) / previousWeekRevenue) * 100 : 0;
+
+            // Revenue by payment method
+            const revenueByPaymentMethod = {};
+            allOrders.forEach(order => {
+                const method = order.paymentMethod || 'unknown';
+                revenueByPaymentMethod[method] = (revenueByPaymentMethod[method] || 0) + (order.total || 0);
+            });
+
+            const metrics = {
+                totalRevenue,
+                monthlyRevenue,
+                weeklyRevenue,
+                avgOrderValue,
+                totalOrders: allOrders.length,
+                monthlyOrders: monthlyOrders.length,
+                weeklyOrders: weeklyOrders.length,
+                monthlyGrowth: Math.round(monthlyGrowth * 100) / 100,
+                weeklyGrowth: Math.round(weeklyGrowth * 100) / 100,
+                revenueByPaymentMethod,
+                topSellingProducts: await this.getTopSellingProducts()
+            };
+
+            this.setCachedData(cacheKey, metrics);
+            return metrics;
+
+        } catch (error) {
+            console.error('❌ Error calculating revenue metrics:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get customer metrics including segmentation and CLV
+     */
+    async getCustomerMetrics() {
+        const cacheKey = 'customer_metrics';
+        const cached = this.getCachedData(cacheKey);
+        if (cached) return cached;
+
+        try {
+            const [usersSnapshot, ordersSnapshot] = await Promise.all([
+                this.db.collection('users').get(),
+                this.db.collection('orders').get()
+            ]);
+
+            const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Filter out admin users
+            const customers = users.filter(user => user.role !== 'admin');
+
+            // Customer segmentation by tier
+            const tierDistribution = {
+                bronze: customers.filter(u => u.tier === 'bronze').length,
+                silver: customers.filter(u => u.tier === 'silver').length,
+                gold: customers.filter(u => u.tier === 'gold').length
+            };
+
+            // Calculate CLV for each customer
+            const customersWithCLV = customers.map(customer => {
+                const customerOrders = orders.filter(order => order.userId === customer.id);
+                const clv = this.calculateCLV(customer, customerOrders);
+
+                return {
+                    id: customer.id,
+                    name: customer.name,
+                    email: customer.email,
+                    tier: customer.tier,
+                    totalSpent: customer.totalSpent || 0,
+                    orderCount: customerOrders.length,
+                    clv: Math.round(clv * 100) / 100,
+                    joinDate: customer.joinDate,
+                    lastOrderDate: this.getLastOrderDate(customerOrders)
+                };
+            });
+
+            // Sort by CLV descending
+            customersWithCLV.sort((a, b) => b.clv - a.clv);
+
+            // Calculate overall metrics
+            const totalCLV = customersWithCLV.reduce((sum, customer) => sum + customer.clv, 0);
+            const avgCLV = customers.length > 0 ? totalCLV / customers.length : 0;
+
+            // Customer acquisition metrics
+            const newCustomers = this.getNewCustomersThisMonth(customers);
+            const churnRate = await this.calculateChurnRate(customers, orders);
+
+            const metrics = {
+                totalCustomers: customers.length,
+                tierDistribution,
+                topCustomers: customersWithCLV.slice(0, 10),
+                avgCLV: Math.round(avgCLV * 100) / 100,
+                totalCLV: Math.round(totalCLV * 100) / 100,
+                newCustomersThisMonth: newCustomers,
+                churnRate: Math.round(churnRate * 100) / 100,
+                customerGrowthRate: await this.calculateCustomerGrowthRate(customers)
+            };
+
+            this.setCachedData(cacheKey, metrics);
+            return metrics;
+
+        } catch (error) {
+            console.error('❌ Error calculating customer metrics:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get product performance metrics
+     */
+    async getProductMetrics() {
+        const cacheKey = 'product_metrics';
+        const cached = this.getCachedData(cacheKey);
+        if (cached) return cached;
+
+        try {
+            const [productsSnapshot, ordersSnapshot] = await Promise.all([
+                this.db.collection('products').get(),
+                this.db.collection('orders').get()
+            ]);
+
+            const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Calculate product performance
+            const productPerformance = products.map(product => {
+                const productOrders = orders.filter(order =>
+                    order.items && order.items.some(item => item.productId === product.id)
+                );
+
+                const totalSales = productOrders.reduce((sum, order) => {
+                    const item = order.items.find(i => i.productId === product.id);
+                    return sum + (item ? item.quantity : 0);
+                }, 0);
+
+                const totalRevenue = productOrders.reduce((sum, order) => {
+                    const item = order.items.find(i => i.productId === product.id);
+                    return sum + (item ? item.price * item.quantity : 0);
+                }, 0);
+
+                return {
+                    id: product.id,
+                    name: product.name,
+                    category: product.category,
+                    price: product.price,
+                    stock: product.stock,
+                    sales: totalSales,
+                    revenue: totalRevenue,
+                    conversionRate: totalSales > 0 ? (totalSales / (totalSales + (product.stock * 0.1))) * 100 : 0
+                };
+            });
+
+            // Sort by revenue descending
+            productPerformance.sort((a, b) => b.revenue - a.revenue);
+
+            // Category performance
+            const categoryPerformance = {};
+            productPerformance.forEach(product => {
+                if (!categoryPerformance[product.category]) {
+                    categoryPerformance[product.category] = {
+                        products: 0,
+                        totalSales: 0,
+                        totalRevenue: 0
+                    };
+                }
+                categoryPerformance[product.category].products++;
+                categoryPerformance[product.category].totalSales += product.sales;
+                categoryPerformance[product.category].totalRevenue += product.revenue;
+            });
+
+            const metrics = {
+                totalProducts: products.length,
+                topProducts: productPerformance.slice(0, 10),
+                categoryPerformance,
+                avgProductPrice: products.length > 0 ?
+                    products.reduce((sum, p) => sum + p.price, 0) / products.length : 0,
+                outOfStockProducts: products.filter(p => p.stock === 0).length,
+                lowStockProducts: products.filter(p => p.stock > 0 && p.stock <= 5).length
+            };
+
+            this.setCachedData(cacheKey, metrics);
+            return metrics;
+
+        } catch (error) {
+            console.error('❌ Error calculating product metrics:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get RFM (Recency, Frequency, Monetary) analysis
+     */
+    async getRFMAnalysis() {
+        const cacheKey = 'rfm_analysis';
+        const cached = this.getCachedData(cacheKey);
+        if (cached) return cached;
+
+        try {
+            const [usersSnapshot, ordersSnapshot] = await Promise.all([
+                this.db.collection('users').get(),
+                this.db.collection('orders').get()
+            ]);
+
+            const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Filter out admin users
+            const customers = users.filter(user => user.role !== 'admin');
+
+            const rfmData = customers.map(customer => {
+                const customerOrders = orders.filter(order => order.userId === customer.id);
+
+                // Calculate RFM scores
+                const rfmScores = this.calculateRFMScores(customer, customerOrders);
+                const segment = this.getRFMSegment(rfmScores.rScore, rfmScores.fScore, rfmScores.mScore);
+
+                return {
+                    customerId: customer.id,
+                    name: customer.name,
+                    email: customer.email,
+                    ...rfmScores,
+                    segment,
+                    tier: customer.tier
+                };
+            });
+
+            // Calculate segment distribution
+            const segmentDistribution = {};
+            rfmData.forEach(customer => {
+                segmentDistribution[customer.segment] = (segmentDistribution[customer.segment] || 0) + 1;
+            });
+
+            // Get customers by segment
+            const segments = {
+                champions: rfmData.filter(c => c.segment === 'Champions'),
+                loyalCustomers: rfmData.filter(c => c.segment === 'Loyal Customers'),
+                potentialLoyalists: rfmData.filter(c => c.segment === 'Potential Loyalists'),
+                atRisk: rfmData.filter(c => c.segment === 'At Risk'),
+                cantLoseThem: rfmData.filter(c => c.segment === "Can't Lose Them"),
+                newCustomers: rfmData.filter(c => c.segment === 'New Customers'),
+                others: rfmData.filter(c => c.segment === 'Others')
+            };
+
+            const analysis = {
+                rfmData,
+                segmentDistribution,
+                segments,
+                totalCustomers: customers.length,
+                avgRecency: rfmData.length > 0 ?
+                    rfmData.reduce((sum, c) => sum + c.recency, 0) / rfmData.length : 0,
+                avgFrequency: rfmData.length > 0 ?
+                    rfmData.reduce((sum, c) => sum + c.frequency, 0) / rfmData.length : 0,
+                avgMonetary: rfmData.length > 0 ?
+                    rfmData.reduce((sum, c) => sum + c.monetary, 0) / rfmData.length : 0
+            };
+
+            this.setCachedData(cacheKey, analysis);
+            return analysis;
+
+        } catch (error) {
+            console.error('❌ Error calculating RFM analysis:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get NPS (Net Promoter Score) data
+     */
+    async getNPSData() {
+        const cacheKey = 'nps_data';
+        const cached = this.getCachedData(cacheKey);
+        if (cached) return cached;
+
+        try {
+            const ninetyDaysAgo = new Date(Date.now() - (90 * 24 * 60 * 60 * 1000));
+
+            const npsSnapshot = await this.db.collection('nps_responses')
+                .where('createdAt', '>=', ninetyDaysAgo)
+                .get();
+
+            const responses = npsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            if (responses.length === 0) {
+                return {
+                    npsScore: 0,
+                    promoters: 0,
+                    passives: 0,
+                    detractors: 0,
+                    totalResponses: 0,
+                    responseRate: 0,
+                    trend: 0
+                };
+            }
+
+            // Calculate NPS
+            const promoters = responses.filter(r => r.score >= 9).length;
+            const passives = responses.filter(r => r.score >= 7 && r.score <= 8).length;
+            const detractors = responses.filter(r => r.score <= 6).length;
+
+            const npsScore = responses.length > 0 ?
+                Math.round(((promoters - detractors) / responses.length) * 100) : 0;
+
+            // Calculate response rate (simplified)
+            const activeCustomers = await this.getActiveCustomerCount();
+            const responseRate = activeCustomers > 0 ? (responses.length / activeCustomers) * 100 : 0;
+
+            // Calculate trend (compare with previous period)
+            const previousPeriodResponses = await this.getPreviousPeriodNPSResponses();
+            const currentPeriodScore = npsScore;
+            const previousPeriodScore = previousPeriodResponses.length > 0 ?
+                Math.round(((previousPeriodResponses.filter(r => r.score >= 9).length - previousPeriodResponses.filter(r => r.score <= 6).length) / previousPeriodResponses.length) * 100) : 0;
+            const trend = previousPeriodScore > 0 ? ((currentPeriodScore - previousPeriodScore) / previousPeriodScore) * 100 : 0;
+
+            const npsData = {
+                npsScore,
+                promoters,
+                passives,
+                detractors,
+                totalResponses: responses.length,
+                responseRate: Math.round(responseRate * 100) / 100,
+                trend: Math.round(trend * 100) / 100,
+                averageScore: responses.length > 0 ?
+                    Math.round((responses.reduce((sum, r) => sum + r.score, 0) / responses.length) * 100) / 100 : 0,
+                recentResponses: responses.slice(0, 10)
+            };
+
+            this.setCachedData(cacheKey, npsData);
+            return npsData;
+
+        } catch (error) {
+            console.error('❌ Error calculating NPS data:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Submit NPS response
+     */
+    async submitNPSResponse(userId, score, feedback = '') {
+        try {
+            const npsResponse = {
+                userId,
+                score: parseInt(score),
+                feedback,
+                createdAt: new Date(),
+                userAgent: navigator.userAgent
+            };
+
+            await this.db.collection('nps_responses').add(npsResponse);
+
+            // Invalidate NPS cache
+            this.invalidateCache(['nps']);
+
+            return { success: true, message: 'NPS response submitted successfully' };
+        } catch (error) {
+            console.error('❌ Error submitting NPS response:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update dashboard metrics in real-time
+     */
+    async updateDashboardMetrics() {
+        try {
+            const dashboardData = await this.getBusinessMetricsDashboard();
+            // Emit event for dashboard to listen to
+            window.dispatchEvent(new CustomEvent('businessMetricsUpdated', {
+                detail: dashboardData
+            }));
+        } catch (error) {
+            console.error('❌ Error updating dashboard metrics:', error);
+        }
+    }
+
+    // Helper methods for calculations
+
+    /**
+     * Helper method to safely extract timestamp from various date formats
+     */
+    getTimestamp(dateValue) {
+        try {
+            // Handle Firebase Timestamp
+            if (dateValue && typeof dateValue.toDate === 'function') {
+                return dateValue.toDate().getTime();
+            }
+
+            // Handle JavaScript Date
+            if (dateValue instanceof Date) {
+                return dateValue.getTime();
+            }
+
+            // Handle string or number
+            if (typeof dateValue === 'string' || typeof dateValue === 'number') {
+                const date = new Date(dateValue);
+                if (!isNaN(date.getTime())) {
+                    return date.getTime();
+                }
+            }
+
+            // Fallback for invalid dates
+            console.warn('Invalid date value:', dateValue);
+            return 0;
+        } catch (error) {
+            console.error('Error converting date to timestamp:', error);
+            return 0;
+        }
+    }
+
+    calculateRFMScores(customer, orders) {
+        const now = new Date();
+
+        // Recency: Days since last purchase
+        const lastOrderDate = orders.length > 0 ?
+            Math.max(...orders.map(order => this.getTimestamp(order.createdAt))) : 0;
+        const recency = lastOrderDate > 0 ?
+            Math.floor((now.getTime() - lastOrderDate) / (1000 * 60 * 60 * 24)) : 999;
+
+        // Frequency: Number of orders
+        const frequency = orders.length;
+
+        // Monetary: Total spent
+        const monetary = customer.totalSpent || 0;
+
+        // Calculate scores (1-5 scale)
+        const rScore = this.calculateRScore(recency);
+        const fScore = this.calculateFScore(frequency);
+        const mScore = this.calculateMScore(monetary);
+
+        return {
+            recency,
+            frequency,
+            monetary,
+            rScore,
+            fScore,
+            mScore,
+            rfmScore: `${rScore}${fScore}${mScore}`
+        };
+    }
+
+    calculateRScore(recency) {
+        if (recency <= 30) return 5;
+        if (recency <= 60) return 4;
+        if (recency <= 90) return 3;
+        if (recency <= 180) return 2;
+        return 1;
+    }
+
+    calculateFScore(frequency) {
+        if (frequency >= 10) return 5;
+        if (frequency >= 5) return 4;
+        if (frequency >= 3) return 3;
+        if (frequency >= 2) return 2;
+        return 1;
+    }
+
+    calculateMScore(monetary) {
+        if (monetary >= 50000) return 5;
+        if (monetary >= 25000) return 4;
+        if (monetary >= 10000) return 3;
+        if (monetary >= 5000) return 2;
+        return 1;
+    }
+
+    getRFMSegment(rScore, fScore, mScore) {
+        const score = rScore + fScore + mScore;
+
+        if (rScore >= 4 && fScore >= 4 && mScore >= 4) return 'Champions';
+        if (rScore >= 3 && fScore >= 3 && mScore >= 3) return 'Loyal Customers';
+        if (rScore >= 3 && fScore <= 2 && mScore >= 3) return 'Potential Loyalists';
+        if (rScore <= 2 && fScore >= 3 && mScore >= 3) return "Can't Lose Them";
+        if (rScore <= 2 && fScore <= 2 && mScore >= 3) return 'At Risk';
+        if (rScore >= 3 && fScore <= 2 && mScore <= 2) return 'New Customers';
+        return 'Others';
+    }
+
+    calculateCLV(customer, orders) {
+        if (orders.length === 0) return 0;
+
+        // Average order value
+        const totalSpent = customer.totalSpent || 0;
+        const avgOrderValue = totalSpent / orders.length;
+
+        // Purchase frequency (orders per month)
+        const firstOrder = Math.min(...orders.map(order => this.getTimestamp(order.createdAt)));
+        const lastOrder = Math.max(...orders.map(order => this.getTimestamp(order.createdAt)));
+
+        if (firstOrder === 0 || lastOrder === 0) return 0;
+
+        const customerLifespanDays = (lastOrder - firstOrder) / (1000 * 60 * 60 * 24);
+        const purchaseFrequency = customerLifespanDays > 0 ?
+            (orders.length / (customerLifespanDays / 30)) : 1;
+
+        // Estimated customer lifespan based on tier and activity
+        const baseLifespan = 12; // months
+        const tierMultiplier = { bronze: 1, silver: 1.5, gold: 2 };
+        const estimatedLifespan = baseLifespan * (tierMultiplier[customer.tier] || 1);
+
+        // Profit margin assumption (30%)
+        const profitMargin = 0.3;
+
+        return avgOrderValue * purchaseFrequency * estimatedLifespan * profitMargin;
+    }
+
+    getLastOrderDate(orders) {
+        if (orders.length === 0) return null;
+
+        try {
+            // Handle different timestamp formats (Firebase Timestamp or Date)
+            const timestamps = orders.map(order => {
+                const createdAt = order.createdAt;
+
+                // Handle Firebase Timestamp
+                if (createdAt && typeof createdAt.toDate === 'function') {
+                    return createdAt.toDate().getTime();
+                }
+
+                // Handle JavaScript Date or date string
+                if (createdAt instanceof Date) {
+                    return createdAt.getTime();
+                }
+
+                if (typeof createdAt === 'string' || typeof createdAt === 'number') {
+                    return new Date(createdAt).getTime();
+                }
+
+                // Fallback for invalid dates
+                console.warn('Invalid createdAt format:', createdAt);
+                return 0;
+            }).filter(timestamp => !isNaN(timestamp) && timestamp > 0);
+
+            if (timestamps.length === 0) return null;
+
+            const lastOrder = Math.max(...timestamps);
+            return new Date(lastOrder).toISOString();
+
+        } catch (error) {
+            console.error('Error calculating last order date:', error);
+            return null;
+        }
+    }
+
+    async getPreviousPeriodRevenue(period) {
+        const now = new Date();
+        let startDate, endDate;
+
+        if (period === 'month') {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        } else {
+            startDate = new Date(now.getTime() - (14 * 24 * 60 * 60 * 1000));
+            endDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        }
+
+        try {
+            const ordersSnapshot = await this.db.collection('orders')
+                .where('createdAt', '>=', startDate)
+                .where('createdAt', '<', endDate)
+                .get();
+
+            return ordersSnapshot.docs.reduce((sum, doc) => sum + (doc.data().total || 0), 0);
+        } catch (error) {
+            console.error('Error getting previous period revenue:', error);
+            return 0;
+        }
+    }
+
+    async getTopSellingProducts() {
+        try {
+            const [productsSnapshot, ordersSnapshot] = await Promise.all([
+                this.db.collection('products').get(),
+                this.db.collection('orders').get()
+            ]);
+
+            const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            return products.map(product => {
+                const productOrders = orders.filter(order =>
+                    order.items && order.items.some(item => item.productId === product.id)
+                );
+
+                const totalSales = productOrders.reduce((sum, order) => {
+                    const item = order.items.find(i => i.productId === product.id);
+                    return sum + (item ? item.quantity : 0);
+                }, 0);
+
+                return {
+                    id: product.id,
+                    name: product.name,
+                    sales: totalSales,
+                    revenue: productOrders.reduce((sum, order) => {
+                        const item = order.items.find(i => i.productId === product.id);
+                        return sum + (item ? item.price * item.quantity : 0);
+                    }, 0)
+                };
+            }).filter(p => p.sales > 0).sort((a, b) => b.sales - a.sales).slice(0, 5);
+        } catch (error) {
+            console.error('Error getting top selling products:', error);
+            return [];
+        }
+    }
+
+    getNewCustomersThisMonth(customers) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        return customers.filter(customer => {
+            const joinDate = this.getTimestamp(customer.joinDate);
+            return joinDate >= thirtyDaysAgo.getTime();
+        }).length;
+    }
+
+    async calculateChurnRate(customers, orders) {
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+        const churned = customers.filter(customer => {
+            const customerOrders = orders.filter(order => order.userId === customer.id);
+            if (customerOrders.length === 0) return true;
+
+            const lastOrderDate = Math.max(...customerOrders.map(order =>
+                this.getTimestamp(order.createdAt)
+            ));
+
+            return lastOrderDate < ninetyDaysAgo.getTime();
+        }).length;
+
+        return customers.length > 0 ? churned / customers.length : 0;
+    }
+
+    async calculateCustomerGrowthRate(customers) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const currentCustomers = customers.length;
+        const previousCustomers = customers.filter(customer => {
+            const joinDate = this.getTimestamp(customer.joinDate);
+            return joinDate < thirtyDaysAgo.getTime();
+        }).length;
+
+        return previousCustomers > 0 ?
+            ((currentCustomers - previousCustomers) / previousCustomers) * 100 : 0;
+    }
+
+    async getActiveCustomerCount() {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        try {
+            const activeOrdersSnapshot = await this.db.collection('orders')
+                .where('createdAt', '>=', thirtyDaysAgo)
+                .get();
+
+            const activeUserIds = new Set();
+            activeOrdersSnapshot.docs.forEach(doc => {
+                const orderData = doc.data();
+                if (orderData.userId) {
+                    activeUserIds.add(orderData.userId);
+                }
+            });
+
+            return activeUserIds.size;
+        } catch (error) {
+            console.error('Error getting active customer count:', error);
+            return 0;
+        }
+    }
+
+    async getPreviousPeriodNPSResponses() {
+        const now = new Date();
+        const currentPeriodStart = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+        const previousPeriodStart = new Date(now.getTime() - (180 * 24 * 60 * 60 * 1000));
+
+        try {
+            const npsSnapshot = await this.db.collection('nps_responses')
+                .where('createdAt', '>=', previousPeriodStart)
+                .where('createdAt', '<', currentPeriodStart)
+                .get();
+
+            return npsSnapshot.docs.map(doc => doc.data());
+        } catch (error) {
+            console.error('Error getting previous period NPS responses:', error);
+            return [];
+        }
+    }
+
+    generateSummaryMetrics(revenue, customers, rfm, nps) {
+        return {
+            totalRevenue: revenue.totalRevenue,
+            totalCustomers: customers.totalCustomers,
+            avgCLV: customers.avgCLV,
+            npsScore: nps.npsScore,
+            topSegment: Object.keys(rfm.segmentDistribution).reduce((a, b) =>
+                rfm.segmentDistribution[a] > rfm.segmentDistribution[b] ? a : b, 'Others'),
+            segmentCount: Object.keys(rfm.segmentDistribution).length
+        };
+    }
+
+    // Cache management methods
+    getCachedData(key) {
+        const cached = this.cache.get(key);
+        if (cached && (Date.now() - cached.timestamp) < this.cacheTimeout) {
+            return cached.data;
+        }
+        return null;
+    }
+
+    setCachedData(key, data) {
+        this.cache.set(key, {
+            data,
+            timestamp: Date.now()
+        });
+    }
+
+    invalidateCache(keys) {
+        keys.forEach(key => {
+            if (key === 'all') {
+                this.cache.clear();
+            } else {
+                this.cache.delete(key);
+                // Also clear related composite keys
+                this.cache.delete(`business_dashboard`);
+            }
+        });
+    }
+
+    // Export methods
+    async exportBusinessReport(format = 'json') {
+        const dashboardData = await this.getBusinessMetricsDashboard();
+
+        if (format === 'csv') {
+            return this.generateCSVReport(dashboardData);
+        }
+
+        return dashboardData;
+    }
+
+    generateCSVReport(data) {
+        const csvData = [
+            ['Metric', 'Value', 'Category'],
+            ['Total Revenue', data.revenue.totalRevenue, 'Revenue'],
+            ['Total Customers', data.customers.totalCustomers, 'Customers'],
+            ['Average CLV', data.customers.avgCLV, 'Customers'],
+            ['NPS Score', data.nps.npsScore, 'Satisfaction'],
+            ['Champions', data.rfm.segments.champions.length, 'RFM'],
+            ['Loyal Customers', data.rfm.segments.loyalCustomers.length, 'RFM'],
+            ['At Risk', data.rfm.segments.atRisk.length, 'RFM']
+        ];
+
+        return csvData.map(row => row.join(',')).join('\n');
+    }
+}
+
+// Create global instance
+const businessMetricsService = new BusinessMetricsService();

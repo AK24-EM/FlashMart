@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlashMart - Operations Dashboard</title>
+
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/amazon-theme.css">
+
+    <style>
+        /* Operations Dashboard Styles */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-xl: 0 20px 25px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.04);
+
+            --border-radius: 16px;
+            --border-radius-sm: 8px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .operations-dashboard {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Enhanced Header */
+        .dashboard-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            margin-bottom: 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .dashboard-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+        .dashboard-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 15px;
+            font-weight: 400;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Navigation Tabs */
+        .dashboard-tabs {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 0;
+            margin: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 20px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn:hover {
+            color: #1e293b;
+            background: rgba(103, 126, 234, 0.1);
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: rgba(103, 126, 234, 0.1);
+        }
+
+        /* Dashboard Content */
+        .dashboard-content {
+            margin: 30px;
+        }
+
+        /* Metrics Overview */
+        .metrics-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-gradient);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .metric-card.orders::before {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .metric-card.revenue::before {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+        }
+
+        .metric-card.inventory::before {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+        }
+
+        .metric-card.channels::before {
+            background: linear-gradient(135deg, #17a2b8, #e83e8c);
+        }
+
+        .metric-title {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 2.4rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1e293b, #475569);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .metric-change {
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        .metric-change.positive {
+            color: #10b981;
+        }
+
+        .metric-change.negative {
+            color: #ef4444;
+        }
+
+        /* Chart Containers */
+        .chart-container {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 32px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Channel Performance Grid */
+        .channel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .channel-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: var(--transition);
+        }
+
+        .channel-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .channel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .channel-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .channel-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .channel-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .channel-metric {
+            text-align: center;
+            padding: 16px;
+            background: rgba(103, 126, 234, 0.1);
+            border-radius: var(--border-radius-sm);
+            border: 1px solid rgba(103, 126, 234, 0.2);
+        }
+
+        .channel-metric-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .channel-metric-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Inventory Alerts */
+        .alerts-section {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 30px;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: var(--border-radius-sm);
+            color: #dc2626;
+        }
+
+        .alert-icon {
+            font-size: 1.2rem;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .alert-message {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* Order Processing Queue */
+        .processing-queue {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+        }
+
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            background: rgba(103, 126, 234, 0.1);
+            border: 1px solid rgba(103, 126, 234, 0.2);
+            border-radius: var(--border-radius-sm);
+        }
+
+        .queue-priority {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--success-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .queue-order-id {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .queue-channel {
+            padding: 4px 12px;
+            background: rgba(103, 126, 234, 0.2);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .queue-amount {
+            font-weight: 700;
+            color: #10b981;
+            margin-left: auto;
+        }
+
+        /* Omnichannel Insights */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .insight-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .insight-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .insight-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .insight-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .insight-message {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .insight-action {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .insight-action:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Real-time Status */
+        .realtime-status {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 16px 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-title {
+                font-size: 2.2rem;
+            }
+
+            .dashboard-tabs {
+                margin: 20px;
+                padding: 0;
+            }
+
+            .tab-btn {
+                padding: 16px 20px;
+                font-size: 0.9rem;
+            }
+
+            .metrics-overview {
+                grid-template-columns: 1fr;
+                margin: 20px;
+                gap: 16px;
+            }
+
+            .channel-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .channel-metrics {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .dashboard-content {
+                margin: 20px;
+            }
+
+            .chart-container {
+                padding: 24px;
+            }
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 80px 40px;
+            color: #64748b;
+        }
+
+        .loading i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #667eea;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="amazon-header">
+        <div class="nav-belt">
+            <div class="nav-left">
+                <a href="index.html" class="nav-logo">
+                    <span class="logo-text">FlashMart</span>
+                </a>
+            </div>
+            <div class="nav-right">
+                <a href="index.html" class="nav-a">
+                    <i class="fas fa-arrow-left"></i> Back to Store
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Operations Dashboard -->
+    <div class="operations-dashboard">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">🚀 Operations Command Center</h1>
+            <p class="dashboard-subtitle">Real-time order tracking, inventory management, and omnichannel analytics</p>
+        </div>
+
+        <!-- Real-time Status -->
+        <div class="realtime-status">
+            <div class="status-indicator"></div>
+            <span class="status-text">🟢 All systems operational • Real-time data updates active</span>
+        </div>
+
+        <!-- Dashboard Tabs -->
+        <div class="dashboard-tabs">
+            <button class="tab-btn active" onclick="showTab('overview')">Overview</button>
+            <button class="tab-btn" onclick="showTab('orders')">Order Management</button>
+            <button class="tab-btn" onclick="showTab('inventory')">Inventory</button>
+            <button class="tab-btn" onclick="showTab('channels')">Channel Analytics</button>
+            <button class="tab-btn" onclick="showTab('insights')">Insights</button>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <!-- Loading State -->
+            <div class="loading" id="loading-state">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading operations data...</p>
+            </div>
+
+            <!-- Overview Tab -->
+            <div id="overview-tab" class="tab-content">
+                <!-- Key Metrics -->
+                <div class="metrics-overview" id="overview-metrics">
+                    <div class="metric-card orders">
+                        <div class="metric-icon" style="position: absolute; top: 20px; right: 20px; font-size: 2rem; opacity: 0.2;">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="metric-title">Active Orders</div>
+                        <div class="metric-value" id="active-orders-count">0</div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>Processing: <span id="processing-count">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="metric-card revenue">
+                        <div class="metric-icon" style="position: absolute; top: 20px; right: 20px; font-size: 2rem; opacity: 0.2;">
+                            <i class="fas fa-rupee-sign"></i>
+                        </div>
+                        <div class="metric-title">Total Revenue</div>
+                        <div class="metric-value" id="total-revenue">₹0</div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>Avg Order: ₹<span id="avg-order-value">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="metric-card inventory">
+                        <div class="metric-icon" style="position: absolute; top: 20px; right: 20px; font-size: 2rem; opacity: 0.2;">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div class="metric-title">Inventory Items</div>
+                        <div class="metric-value" id="inventory-count">0</div>
+                        <div class="metric-change" id="low-stock-change">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Low Stock: <span id="low-stock-count">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="metric-card channels">
+                        <div class="metric-icon" style="position: absolute; top: 20px; right: 20px; font-size: 2rem; opacity: 0.2;">
+                            <i class="fas fa-network-wired"></i>
+                        </div>
+                        <div class="metric-title">Active Channels</div>
+                        <div class="metric-value" id="active-channels-count">0</div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>Performance: <span id="top-channel">Loading...</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channel Performance Overview -->
+                <div class="chart-container">
+                    <h3 class="chart-title">
+                        <i class="fas fa-chart-bar"></i> Channel Performance Overview
+                    </h3>
+                    <div class="channel-grid" id="channel-overview">
+                        <!-- Channel cards will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Real-time Alerts -->
+                <div class="alerts-section">
+                    <h3 style="margin-bottom: 20px; color: #1e293b;">
+                        <i class="fas fa-bell"></i> Real-time Alerts
+                    </h3>
+                    <div id="alerts-container">
+                        <div class="alert-item">
+                            <i class="fas fa-info-circle alert-icon"></i>
+                            <div class="alert-content">
+                                <div class="alert-title">System Ready</div>
+                                <div class="alert-message">All operations modules are loaded and ready for monitoring.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Tab -->
+            <div id="orders-tab" class="tab-content" style="display: none;">
+                <div class="chart-container">
+                    <h3 class="chart-title">
+                        <i class="fas fa-list"></i> Order Processing Queue
+                    </h3>
+                    <div class="processing-queue">
+                        <div id="orders-queue">
+                            <!-- Orders will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div id="inventory-tab" class="tab-content" style="display: none;">
+                <div class="chart-container">
+                    <h3 class="chart-title">
+                        <i class="fas fa-warehouse"></i> Inventory Management
+                    </h3>
+                    <div id="inventory-management">
+                        <!-- Inventory management interface will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Channels Tab -->
+            <div id="channels-tab" class="tab-content" style="display: none;">
+                <div class="chart-container">
+                    <h3 class="chart-title">
+                        <i class="fas fa-broadcast-tower"></i> Omnichannel Analytics
+                    </h3>
+                    <div id="omnichannel-analytics">
+                        <!-- Omnichannel analytics will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights Tab -->
+            <div id="insights-tab" class="tab-content" style="display: none;">
+                <div class="insights-grid" id="insights-container">
+                    <!-- Insights will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="scripts/firebase.js"></script>
+    <script src="scripts/operations-service.js"></script>
+    <script src="scripts/inventory-manager.js"></script>
+    <script src="scripts/order-tracker.js"></script>
+    <script src="scripts/channel-analytics.js"></script>
+    <script src="scripts/operations-dashboard.js"></script>
+</body>
+</html>

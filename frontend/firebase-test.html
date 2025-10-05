@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Test</title>
+</head>
+<body>
+    <h1>Firebase Connection Test</h1>
+    <div id="status">Testing Firebase connection...</div>
+    <div id="results"></div>
+
+    <!-- Firebase Configuration -->
+    <script>
+        window.FIREBASE_CONFIG = {
+            apiKey: "AIzaSyB1hYkS2ucpOKdJWcOziJJ5kaT30b-eKow",
+            authDomain: "flash-39282.firebaseapp.com",
+            projectId: "flash-39282",
+            storageBucket: "flash-39282.firebasestorage.app",
+            messagingSenderId: "570627577471",
+            appId: "1:570627577471:web:6e7a91ff2f62d6bda9d14a",
+            measurementId: "G-SEHDJR5NSP"
+        };
+    </script>
+
+    <script src="firebase-config.js"></script>
+    <script src="scripts/firebase.js"></script>
+    <script>
+        async function testFirebase() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+
+            try {
+                statusDiv.textContent = 'Initializing Firebase...';
+
+                // Test Firebase initialization
+                if (typeof firebaseService !== 'undefined') {
+                    await firebaseService.initialize();
+                    statusDiv.textContent = 'Firebase initialized successfully';
+
+                    resultsDiv.innerHTML += '<p>✅ Firebase service available</p>';
+
+                    // Test database connection
+                    if (firebaseService.db) {
+                        resultsDiv.innerHTML += '<p>✅ Database instance available</p>';
+
+                        // Test basic query
+                        statusDiv.textContent = 'Testing database queries...';
+                        const testSnapshot = await firebaseService.db.collection('orders').limit(1).get();
+
+                        resultsDiv.innerHTML += `<p>📊 Orders collection accessible (size: ${testSnapshot.size})</p>`;
+
+                        if (testSnapshot.empty) {
+                            resultsDiv.innerHTML += '<p>⚠️ No orders found - will create sample data</p>';
+                        }
+
+                        statusDiv.textContent = '✅ Firebase connection test completed successfully';
+
+                    } else {
+                        resultsDiv.innerHTML += '<p>❌ Database instance not available</p>';
+                        statusDiv.textContent = '❌ Database connection failed';
+                    }
+
+                } else {
+                    resultsDiv.innerHTML += '<p>❌ Firebase service not loaded</p>';
+                    statusDiv.textContent = '❌ Firebase service unavailable';
+                }
+
+            } catch (error) {
+                resultsDiv.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+                statusDiv.textContent = '❌ Firebase test failed';
+                console.error('Firebase test error:', error);
+            }
+        }
+
+        // Run test when page loads
+        document.addEventListener('DOMContentLoaded', testFirebase);
+    </script>
+</body>
+</html>

@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlashMart - Flash Sales Management System</title>
+    
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/amazon-theme.css">
+
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase Configuration -->
+    <script>
+        // Make Firebase config available globally
+        window.FIREBASE_CONFIG = {
+            apiKey: "AIzaSyB1hYkS2ucpOKdJWcOziJJ5kaT30b-eKow",
+            authDomain: "flash-39282.firebaseapp.com",
+            projectId: "flash-39282",
+            storageBucket: "flash-39282.appspot.com",
+            messagingSenderId: "570627577471",
+            appId: "1:570627577471:web:6e7a91ff2f62d6bda9d14a"
+        };
+    </script>
+    
+    <!-- Application Scripts (load in order) -->
+    <script src="scripts/search.js"></script>
+</head>
+<body>
+    <!-- FlashMart Navigation Header -->
+    <header id="main-header">
+        <div class="nav-belt">
+            <!-- Left Side: Logo and Menu Button -->
+            <div class="nav-left">
+                <a href="#" class="nav-logo">
+                    <i class="fas fa-bars nav-menu-icon"></i>
+                    <span class="logo-text">FlashMart</span>
+                </a>
+                <div class="nav-global-location">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span class="nav-line-1">DELIVER TO</span>
+                    <span class="nav-line-2">India</span>
+                </div>
+            </div>
+            
+            <!-- Center: Search Bar (Most Prominent) -->
+            <div class="nav-center">
+                <div class="nav-search">
+                    <select class="nav-search-dropdown">
+                        <option>All</option>
+                        <option>Electronics</option>
+                        <option>Clothing</option>
+                        <option>Books</option>
+                    </select>
+                    <input type="text" class="nav-search-field" placeholder="Search FlashMart">
+                    <button class="nav-search-submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Right Side: Grouped Navigation Items -->
+            <div class="nav-right">
+                <div class="nav-tools">
+                    <!-- 1. Language Switch -->
+                    <a href="#" class="nav-a" id="language-selector">
+                        <span class="nav-line-1">EN</span>
+                    </a>
+                    
+                    <!-- 2. Profile/Account Button -->
+                    <a href="#" class="nav-a" id="auth-link">
+                        <span class="nav-line-1">Hello, Krrish</span>
+                        <span class="nav-line-2">Account & Lists</span>
+                    </a>
+                    
+                    <!-- 3. Returns & Orders -->
+                    <a href="#" class="nav-a">
+                        <span class="nav-line-1">Returns</span>
+                        <span class="nav-line-2">& Orders</span>
+                    </a>
+                    
+                    <!-- 4. Cart with Item Count -->
+                    <a href="#" class="nav-a nav-cart" id="cart-link">
+                        <span class="nav-cart-icon">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span class="nav-cart-count" id="cart-count">0</span>
+                        </span>
+                        <span class="nav-line-2">Cart</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="nav-main">
+            <div class="nav-left">
+                <a href="#" class="nav-a nav-hamburger">
+                    <i class="fas fa-bars"></i>
+                    All
+                </a>
+            </div>
+            <div class="nav-fill">
+                <ul class="nav-menu">
+                    <li><a href="#" onclick="showPage('home')">Flash Sales</a></li>
+                    <li><a href="#" onclick="showPage('products')">All Products</a></li>
+                    <li><a href="#" onclick="showPage('orders')">Orders</a></li>
+                    <li><a href="#" onclick="showPage('loyalty')">Loyalty Points</a></li>
+                    <li><a href="#" id="admin-nav-link" style="display:none;" onclick="showPage('admin')">Admin</a></li>
+                    <li id="dashboard-nav-item" style="display:none;">
+                        <a href="business-dashboard.html" id="dashboard-link" style="color: #ff9900; font-weight: 600;">Business Dashboard</a>
+                    </li>
+                    <li><a href="#" id="become-seller-btn" style="color: #ff9900; font-weight: 600;">Become a Seller</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+        <!-- Home Page -->
+        <div id="home-page" class="page active">
+            <!-- Flash Sale Banner -->
+            <section class="flash-sale-banner">
+                <div class="container">
+                    <div class="banner-content">
+                        <h1>⚡ FLASH SALE LIVE NOW!</h1>
+                        <div class="countdown-timer" id="main-countdown">
+                            <div class="time-unit">
+                                <span class="time-value" id="hours">00</span>
+                                <span class="time-label">Hours</span>
+                            </div>
+                            <div class="time-unit">
+                                <span class="time-value" id="minutes">00</span>
+                                <span class="time-label">Minutes</span>
+                            </div>
+                            <div class="time-unit">
+                                <span class="time-value" id="seconds">00</span>
+                                <span class="time-label">Seconds</span>
+                            </div>
+                        </div>
+                        <p>Limited time offers • Limited quantities • Don't miss out!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Queue Status (hidden by default) -->
+            <div id="queue-status" class="queue-notification" style="display:none;">
+                <div class="container">
+                    <div class="queue-content">
+                        <i class="fas fa-clock"></i>
+                        <span id="queue-message">You're in the queue. Position: <span id="queue-position">0</span></span>
+                        <div class="queue-progress">
+                            <div class="queue-progress-bar" id="queue-progress"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flash Sale Products Grid -->
+            <section class="products-section">
+                <div class="container">
+                    <h2>Lightning Deals</h2>
+                    <div class="products-grid" id="flash-products-grid">
+                        <!-- Products will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Categories Section -->
+            <section class="categories-section">
+                <div class="container">
+                    <h2>Shop by Category</h2>
+                    <div class="categories-grid">
+                        <div class="category-card">
+                            <img src="https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Electronics">
+                            <h3>Electronics</h3>
+                            <p>Up to 70% off</p>
+                        </div>
+                        <div class="category-card">
+                            <img src="https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Fashion">
+                            <h3>Fashion</h3>
+                            <p>Up to 60% off</p>
+                        </div>
+                        <div class="category-card">
+                            <img src="https://images.pexels.com/photos/1374510/pexels-photo-1374510.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Home">
+                            <h3>Home & Kitchen</h3>
+                            <p>Up to 50% off</p>
+                        </div>
+                        <div class="category-card">
+                            <img src="https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=300" alt="Books">
+                            <h3>Books</h3>
+                            <p>Up to 40% off</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Products Page -->
+        <div id="products-page" class="page">
+            <section class="products-section">
+                <div class="container">
+                    <div class="page-header">
+                        <h2>All Products</h2>
+                        <div class="filters">
+                            <select id="category-filter">
+                                <option value="">All Categories</option>
+                                <option value="electronics">Electronics</option>
+                                <option value="clothing">Clothing</option>
+                                <option value="books">Books</option>
+                                <option value="home">Home & Kitchen</option>
+                            </select>
+                            <select id="sort-filter">
+                                <option value="name">Sort by Name</option>
+                                <option value="price-low">Price: Low to High</option>
+                                <option value="price-high">Price: High to Low</option>
+                                <option value="discount">Discount %</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="products-grid" id="all-products-grid">
+                        <!-- Products will be loaded here -->
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Orders Page -->
+        <div id="orders-page" class="page">
+            <section class="orders-section">
+                <div class="container">
+                    <h2>Your Orders</h2>
+                    <div id="orders-list">
+                        <!-- Orders will be loaded here -->
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Loyalty Page -->
+        <div id="loyalty-page" class="page">
+            <section class="loyalty-section">
+                <div class="container">
+                    <div class="loyalty-header">
+                        <h2>Your Loyalty Points</h2>
+                        <div class="points-balance">
+                            <span class="points-value" id="user-points">0</span>
+                            <span class="points-label">Points</span>
+                        </div>
+                    </div>
+                    
+                    <div class="loyalty-tiers">
+                        <h3>Membership Tiers</h3>
+                        <div class="tiers-grid">
+                            <div class="tier-card bronze active">
+                                <h4>Bronze</h4>
+                                <p>0 - 999 points</p>
+                                <ul>
+                                    <li>Standard access to flash sales</li>
+                                    <li>1 point per ₹100 spent</li>
+                                </ul>
+                            </div>
+                            <div class="tier-card silver">
+                                <h4>Silver</h4>
+                                <p>1000 - 4999 points</p>
+                                <ul>
+                                    <li>Early access (5 min)</li>
+                                    <li>1.5 points per ₹100 spent</li>
+                                </ul>
+                            </div>
+                            <div class="tier-card gold">
+                                <h4>Gold</h4>
+                                <p>5000+ points</p>
+                                <ul>
+                                    <li>VIP early access (10 min)</li>
+                                    <li>2 points per ₹100 spent</li>
+                                    <li>Exclusive deals</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="points-history">
+                        <h3>Points History</h3>
+                        <div id="points-history-list">
+                            <!-- Points history will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Admin Page -->
+        <div id="admin-page" class="page">
+            <section class="admin-section">
+                <div class="container">
+                    <div class="admin-header">
+                        <h2>Admin Dashboard</h2>
+                        <div class="admin-stats">
+                            <div class="stat-card">
+                                <h4>Active Flash Sales</h4>
+                                <span class="stat-value" id="active-sales">0</span>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Total Revenue</h4>
+                                <span class="stat-value" id="total-revenue">₹0</span>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Queue Length</h4>
+                                <span class="stat-value" id="queue-length">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-tabs">
+                        <button class="tab-btn active" onclick="showAdminTab('products')">Products</button>
+                        <button class="tab-btn" onclick="showAdminTab('sales')">Flash Sales</button>
+                        <button class="tab-btn" onclick="showAdminTab('analytics')">Analytics</button>
+                        <button class="tab-btn" onclick="showAdminTab('users')">Users</button>
+                    </div>
+
+                    <!-- Products Management -->
+                    <div id="admin-products" class="admin-tab-content active">
+                        <div class="tab-header">
+                            <h3>Product Management</h3>
+                            <button class="btn btn-primary" onclick="showAddProductModal()">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button>
+                        </div>
+                        <div class="admin-table">
+                            <table id="products-table">
+                                <thead>
+                                    <tr>
+                                        <th>Image</th>
+                                        <th>Name</th>
+                                        <th>ID</th>
+                                        <th>Category</th>
+                                        <th>Price</th>
+                                        <th>Stock</th>
+                                        <th>Flash Sale</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-products-tbody">
+                                    <!-- Products will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Flash Sales Management -->
+                    <div id="admin-sales" class="admin-tab-content">
+                        <div class="tab-header">
+                            <h3>Flash Sales Management</h3>
+                            <button class="btn btn-primary" onclick="showCreateSaleModal()">
+                                <i class="fas fa-plus"></i> Create Flash Sale
+                            </button>
+                        </div>
+                        <div id="flash-sales-list">
+                            <!-- Flash sales will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Analytics -->
+                    <div id="admin-analytics" class="admin-tab-content">
+                        <h3>Analytics Dashboard</h3>
+                        <div class="analytics-grid">
+                            <div class="analytics-card">
+                                <h4>Key Metrics</h4>
+                                <div class="metrics-grid">
+                                    <div class="metric">
+                                        <span>Active Sales: <strong id="active-sales">0</strong></span>
+                                    </div>
+                                    <div class="metric">
+                                        <span>Total Revenue: <strong id="total-revenue">₹0</strong></span>
+                                    </div>
+                                    <div class="metric">
+                                        <span>Queue Length: <strong id="queue-length">0</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analytics-card">
+                                <h4>Customer Insights</h4>
+                                <div class="customer-segments">
+                                    <div class="segment">
+                                        <span>High Value (Gold): <strong id="gold-users">0</strong></span>
+                                    </div>
+                                    <div class="segment">
+                                        <span>Medium Value (Silver): <strong id="silver-users">0</strong></span>
+                                    </div>
+                                    <div class="segment">
+                                        <span>New Users (Bronze): <strong id="bronze-users">0</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analytics-card">
+                                <h4>Sales Performance</h4>
+                                <div class="chart-container">
+                                    <canvas id="sales-performance-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <!-- Recent Activities Card -->
+                            <div class="analytics-card">
+                                <div class="card-header">
+                                    <h4>Recent Activities</h4>
+                                    <div class="activity-metrics">
+                                        <span class="activity-count">
+                                            <span id="activity-count">0</span>
+                                            <span id="activity-trend" class="trend-indicator"></span>
+                                        </span>
+                                        <span class="activity-label">Last Hour</span>
+                                    </div>
+                                </div>
+                                <div class="chart-pie">
+                                    <canvas id="activityDistributionChart"></canvas>
+                                </div>
+                                <div id="recent-activities" class="recent-activities">
+                                    <!-- Activities will be loaded here -->
+                                    <div class="activity-item">
+                                        <span class="activity-icon">⏳</span>
+                                        <div class="activity-details">
+                                            <div class="activity-title">Loading activities...</div>
+                                            <div class="activity-time">Just now</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Users Management -->
+                    <div id="admin-users" class="admin-tab-content">
+                        <h3>User Management</h3>
+                        <div class="admin-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Tier</th>
+                                        <th>Points</th>
+                                        <th>Orders</th>
+                                        <th>CLV</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-tbody">
+                                    <!-- Users will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('auth-modal')">&times;</span>
+            <div class="auth-container">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" onclick="showAuthTab('login')">Sign In</button>
+                    <button class="auth-tab" onclick="showAuthTab('register')">Create Account</button>
+                </div>
+                
+                <!-- Login Form -->
+                <form id="login-form" class="auth-form active">
+                    <h3>Sign In</h3>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="login-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+                </form>
+                
+                <!-- Register Form -->
+                <form id="register-form" class="auth-form">
+                    <h3>Create Account</h3>
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="register-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="register-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="admin-checkbox">
+                            Register as Admin
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Modal -->
+    <div id="cart-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" onclick="closeModal('cart-modal')">&times;</span>
+            <h3>Shopping Cart</h3>
+            <div id="cart-items">
+                <!-- Cart items will be loaded here -->
+            </div>
+            <div class="cart-total">
+                <h4>Total: ₹<span id="cart-total">0</span></h4>
+                <button class="btn btn-primary" onclick="proceedToCheckout()">Proceed to Checkout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" onclick="closeModal('product-modal')">&times;</span>
+            <div id="product-details">
+                <!-- Product details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal (Admin) -->
+    <div id="add-product-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('add-product-modal')">&times;</span>
+            <h3>Add New Product</h3>
+            <form id="add-product-form">
+                <div class="form-group">
+                    <label>Product Name</label>
+                    <input type="text" id="product-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="product-category" required>
+                        <option value="">Select Category</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="books">Books</option>
+                        <option value="home">Home & Kitchen</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" id="product-price" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock Quantity</label>
+                    <input type="number" id="product-stock" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Image URL</label>
+                    <input type="url" id="product-image">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="product-description" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Product</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="amazon-footer">
+        <div class="footer-top">
+            <a href="#main-header">Back to top</a>
+        </div>
+        <div class="footer-main">
+            <div class="container">
+                <div class="footer-columns">
+                    <div class="footer-column">
+                        <h4>Get to Know Us</h4>
+                        <ul>
+                            <li><a href="#">About FlashMart</a></li>
+                            <li><a href="#">Careers</a></li>
+                            <li><a href="#">Press Releases</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Connect with Us</h4>
+                        <ul>
+                            <li><a href="#">Facebook</a></li>
+                            <li><a href="#">Twitter</a></li>
+                            <li><a href="#">Instagram</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Make Money with Us</h4>
+                        <ul>
+                            <li><a href="#">Sell on FlashMart</a></li>
+                            <li><a href="#">Become an Affiliate</a></li>
+                            <li><a href="#">Advertise Your Products</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Let Us Help You</h4>
+                        <ul>
+                            <li><a href="#">Help</a></li>
+                            <li><a href="#">Returns & Replacements</a></li>
+                            <li><a href="#">Manage Your Account</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="container">
+                <div class="footer-logo">
+                    <span>FlashMart</span>
+                </div>
+                <div class="footer-links">
+                    <a href="#">Conditions of Use & Sale</a>
+                    <a href="#">Privacy Notice</a>
+                    <a href="#">Interest-Based Ads</a>
+                </div>
+                <p>&copy; 2024, FlashMart.com, Inc. or its affiliates</p>
+            </div>
+        </div>
+    </footer>
+    <script src="firebase-config.js"></script>
+    <script src="scripts/firebase.js"></script>
+    <script src="scripts/firebase-test.js"></script>
+    <script src="scripts/firestore-setup.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/main.js"></script>
+    <script src="scripts/products.js"></script>
+    <script src="scripts/app-initializer.js"></script>
+    <script src="scripts/firebase-data-service.js"></script>
+    <script src="scripts/queue-service.js"></script>
+    <script src="scripts/cart.js"></script>
+    <script src="scripts/queue.js"></script>
+    <script src="scripts/admin.js"></script>
+    <script src="scripts/analytics.js"></script>
+    <script src="scripts/firestore-queries.js"></script>
+    <!-- Become a Seller Modal -->
+    <div id="seller-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('seller-modal')">&times;</span>
+            <h3>Become a Seller</h3>
+            <p>Fill out the form below and our team will get in touch with you shortly.</p>
+            
+            <form id="seller-form" class="form-grid">
+                <div class="form-group">
+                    <label for="seller-name">Full Name *</label>
+                    <input type="text" id="seller-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="seller-email">Email *</label>
+                    <input type="email" id="seller-email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="seller-phone">Phone Number *</label>
+                    <input type="tel" id="seller-phone" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="seller-company">Company Name</label>
+                    <input type="text" id="seller-company">
+                </div>
+                
+                <div class="form-group">
+                    <label for="seller-category">Product Category *</label>
+                    <select id="seller-category" required>
+                        <option value="">Select a category</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="fashion">Fashion</option>
+                        <option value="home">Home & Kitchen</option>
+                        <option value="beauty">Beauty & Personal Care</option>
+                        <option value="sports">Sports & Outdoors</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="seller-message">Tell us about your products *</label>
+                    <textarea id="seller-message" rows="4" required></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('seller-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Application</button>
+                </div>
+            </form>
+            
+            <div id="seller-success" style="display: none; text-align: center; padding: 20px;">
+                <div style="color: #067d62; font-size: 24px; margin-bottom: 15px;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>Thank You!</h3>
+                <p>We've received your application. Our team will review your information and get back to you within 2 business days.</p>
+                <button class="btn btn-primary" style="margin-top: 20px;" onclick="closeModal('seller-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/transaction-service.js"></script>
+    <!-- Application Initialization -->
+    <script>
+        // Make sure required functions are available globally
+        window.showSellerModal = function() {
+            document.getElementById('seller-form').reset();
+            document.getElementById('seller-form').style.display = 'block';
+            document.getElementById('seller-success').style.display = 'none';
+            if (typeof showModal === 'function') {
+                showModal('seller-modal');
+            } else {
+                console.error('showModal function is not available');
+            }
+        };
+
+        // Initialize when DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle Become a Seller button click
+            const becomeSellerBtn = document.getElementById('become-seller-btn');
+            if (becomeSellerBtn) {
+                becomeSellerBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showSellerModal();
+                });
+            }
+
+            // Handle seller form submission
+            const sellerForm = document.getElementById('seller-form');
+            if (sellerForm) {
+                sellerForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    // Show loading state
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    const originalBtnText = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+                    
+                    const leadData = {
+                        name: document.getElementById('seller-name').value,
+                        email: document.getElementById('seller-email').value,
+                        phone: document.getElementById('seller-phone').value,
+                        company: document.getElementById('seller-company').value || '',
+                        category: document.getElementById('seller-category').value,
+                        message: document.getElementById('seller-message').value,
+                        type: 'seller',
+                        status: 'new',
+                        source: 'website',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    };
+                    
+                    try {
+                        // Get Firestore instance
+                        const db = firebase.firestore();
+                        
+                        // Add lead to Firestore
+                        await db.collection('leads').add(leadData);
+                        
+                        // Show success message
+                        document.getElementById('seller-form').style.display = 'none';
+                        document.getElementById('seller-success').style.display = 'block';
+                        
+                    } catch (error) {
+                        console.error('Error submitting lead:', error);
+                        alert('There was an error submitting your application. Please try again.');
+                    } finally {
+                        // Reset button state
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalBtnText;
+                    }
+                });
+            }
+            
+        });
+    </script>
+</body>
+</html>

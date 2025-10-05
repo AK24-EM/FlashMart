@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Button Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .btn { padding: 8px 16px; margin: 5px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; }
+        .btn:hover { background: #e0e0e0; }
+        .test-log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-left: 4px solid #007cba; }
+    </style>
+</head>
+<body>
+    <h1>Admin Button Test</h1>
+    <div id="test-container">
+        <button class="btn" onclick="testDataManager()">Test dataManager</button>
+        <button class="btn" onclick="testAdminManager()">Test adminManager</button>
+        <button class="btn" onclick="testLoadProducts()">Test Load Products</button>
+        <button class="btn" onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div id="log" class="test-log"></div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        async function testDataManager() {
+            log('Testing dataManager...');
+            try {
+                if (typeof dataManager !== 'undefined') {
+                    log('✓ dataManager is defined');
+                    
+                    if (typeof dataManager.getProducts === 'function') {
+                        log('✓ dataManager.getProducts is available');
+                        const products = await dataManager.getProducts();
+                        log('✓ Loaded ' + (Array.isArray(products) ? products.length : 0) + ' products');
+                    } else {
+                        log('✗ dataManager.getProducts is not a function');
+                    }
+                } else {
+                    log('✗ dataManager is not defined');
+                }
+            } catch (error) {
+                log('✗ Error testing dataManager: ' + error.message);
+            }
+        }
+
+        function testAdminManager() {
+            log('Testing adminManager...');
+            try {
+                if (typeof adminManager !== 'undefined') {
+                    log('✓ adminManager is defined');
+                    
+                    const methods = ['loadAdminProducts', 'editProduct', 'deleteProduct', 'toggleFlashSale'];
+                    methods.forEach(method => {
+                        if (typeof adminManager[method] === 'function') {
+                            log('✓ adminManager.' + method + ' is available');
+                        } else {
+                            log('✗ adminManager.' + method + ' is missing');
+                        }
+                    });
+                } else {
+                    log('✗ adminManager is not defined');
+                }
+            } catch (error) {
+                log('✗ Error testing adminManager: ' + error.message);
+            }
+        }
+
+        async function testLoadProducts() {
+            log('Testing load products...');
+            try {
+                if (typeof adminManager !== 'undefined' && typeof adminManager.loadAdminProducts === 'function') {
+                    await adminManager.loadAdminProducts();
+                    log('✓ loadAdminProducts called successfully');
+                } else {
+                    log('✗ Cannot test loadAdminProducts - adminManager not available');
+                }
+            } catch (error) {
+                log('✗ Error testing loadAdminProducts: ' + error.message);
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', async () => {
+            log('Page loaded, running auto-tests...');
+            await testDataManager();
+            testAdminManager();
+        });
+    </script>
+</body>
+</html>

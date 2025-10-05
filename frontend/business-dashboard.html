@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlashMart - Business Metrics Dashboard</title>
+
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/amazon-theme.css">
+
+    <style>
+        /* Enhanced Business Dashboard Styles */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-xl: 0 20px 25px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.04);
+
+            --border-radius: 16px;
+            --border-radius-sm: 8px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .business-dashboard {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Animated Background */
+        .business-dashboard::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="%23ffffff" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="%23ffffff" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="%23ffffff" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Enhanced Header */
+        .dashboard-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            margin-bottom: 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .dashboard-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="60" cy="30" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="30" cy="70" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+        }
+
+        .dashboard-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+        .dashboard-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 15px;
+            font-weight: 400;
+            position: relative;
+            z-index: 2;
+        }
+
+        .last-updated {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Enhanced Controls */
+        .export-controls {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            margin: 30px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .refresh-btn {
+            background: var(--success-gradient);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-export {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-export:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Enhanced Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin: 30px;
+        }
+
+        .metric-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-gradient);
+            transition: var(--transition);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .metric-card.revenue::before {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .metric-card.customers::before {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+        }
+
+        .metric-card.nps::before {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+        }
+
+        .metric-title {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 2.4rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1e293b, #475569);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .metric-change {
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        .metric-change.positive {
+            color: #10b981;
+        }
+
+        .metric-change.negative {
+            color: #ef4444;
+        }
+
+        .metric-change.neutral {
+            color: #64748b;
+        }
+
+        /* Enhanced Chart Containers */
+        .chart-container {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 32px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            margin: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: var(--transition);
+        }
+
+        .chart-container:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Enhanced Segmentation Cards */
+        .segmentation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .segment-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 24px;
+            border-radius: var(--border-radius-sm);
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .segment-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+        }
+
+        .segment-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .segment-card.champions::before {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .segment-card.loyal::before {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        }
+
+        .segment-card.potential::before {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .segment-card.at-risk::before {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .segment-card.cant-lose::before {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+
+        .segment-card.new::before {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+        }
+
+        .segment-card.others::before {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+
+        .segment-name {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .segment-count {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1e293b, #475569);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .segment-percentage {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* Enhanced NPS Gauge */
+        .nps-gauge {
+            position: relative;
+            width: 220px;
+            height: 110px;
+            margin: 0 auto;
+        }
+
+        .nps-gauge-meter {
+            width: 100%;
+            height: 100%;
+            border-radius: 110px 110px 0 0;
+            background: conic-gradient(from 180deg,
+                #ef4444 0deg 36deg,
+                #f59e0b 36deg 108deg,
+                #10b981 108deg 180deg);
+            position: relative;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .revenue-analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .revenue-metric {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .metric-icon-small {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .metric-subtitle {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .revenue-chart-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .revenue-chart-section h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+
+        .section-description {
+            font-size: 1rem;
+            color: #64748b;
+            margin-bottom: 30px;
+            font-style: italic;
+            background: rgba(103, 126, 234, 0.1);
+            padding: 12px 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .segment-legend {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .legend-color.champions {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .legend-color.loyal {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        }
+
+        .legend-color.potential {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .nps-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .nps-visualization {
+            text-align: center;
+        }
+
+        .nps-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .nps-label.bad {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .nps-label.good {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .nps-details {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .nps-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .nps-category {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.6);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nps-category.promoters {
+            border-left: 4px solid #10b981;
+        }
+
+        .nps-category.passives {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .nps-category.detractors {
+            border-left: 4px solid #ef4444;
+        }
+
+        .nps-number {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .nps-category.promoters .nps-number {
+            color: #10b981;
+        }
+
+        .nps-category.passives .nps-number {
+            color: #f59e0b;
+        }
+
+        .nps-category.detractors .nps-number {
+            color: #ef4444;
+        }
+
+        .nps-insights {
+            background: rgba(255,255,255,0.6);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nps-insights h4 {
+            margin-bottom: 16px;
+            color: #1e293b;
+            font-size: 1.1rem;
+        }
+
+        .insight-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .insight-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .insight-value {
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .clv-distribution {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .clv-list {
+            max-height: 350px;
+            overflow-y: auto;
+            background: rgba(255,255,255,0.5);
+            border-radius: var(--border-radius-sm);
+            padding: 16px;
+        }
+
+        .clv-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.7);
+            border-radius: 8px;
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: var(--transition);
+        }
+
+        .clv-item:hover {
+            background: rgba(255,255,255,0.9);
+            transform: translateX(4px);
+        }
+
+        .clv-customer {
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .clv-customer::before {
+            content: '👤';
+            font-size: 0.8rem;
+        }
+
+        .clv-value {
+            font-weight: 800;
+            color: #059669;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        /* Enhanced Loading State */
+        .loading {
+            text-align: center;
+            padding: 80px 40px;
+            color: #64748b;
+        }
+
+        .loading i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        /* Pulse Animation for Loading */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading p {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Enhanced Error Message */
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #dc2626;
+            padding: 16px 24px;
+            border-radius: var(--border-radius-sm);
+            margin: 30px;
+            font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-title {
+                font-size: 2.2rem;
+            }
+
+            .dashboard-subtitle {
+                font-size: 1rem;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+                margin: 20px;
+                gap: 16px;
+            }
+
+            .segmentation-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+
+            .clv-distribution {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .export-controls {
+                margin: 20px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .chart-container {
+                margin: 20px;
+                padding: 24px;
+            }
+
+            .nps-container {
+                grid-template-columns: 1fr;
+                gap: 30px;
+                text-align: center;
+            }
+
+            .nps-breakdown {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .revenue-analytics-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .dashboard-header {
+                padding: 30px 20px;
+            }
+
+            .dashboard-title {
+                font-size: 1.8rem;
+            }
+
+            .segmentation-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metric-card {
+                padding: 20px;
+            }
+
+            .revenue-analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nps-breakdown {
+                gap: 12px;
+            }
+
+            .nps-category {
+                padding: 16px;
+            }
+
+        /* Smooth Scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="amazon-header">
+        <div class="nav-belt">
+            <div class="nav-left">
+                <a href="index.html" class="nav-logo">
+                    <span class="logo-text">FlashMart</span>
+                </a>
+            </div>
+            <div class="nav-right">
+                <a href="index.html" class="nav-a">
+                    <i class="fas fa-arrow-left"></i> Back to Store
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Business Dashboard -->
+    <div class="business-dashboard">
+        <!-- Enhanced Amazon-style Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1 class="dashboard-title">
+                        <i class="fas fa-analytics"></i>
+                        Business Intelligence Hub
+                    </h1>
+                    <p class="dashboard-subtitle">
+                        <i class="fas fa-chart-line"></i>
+                        Real-time analytics powered by Firebase & advanced machine learning
+                    </p>
+                    <div class="header-badges">
+                        <span class="badge badge-live">
+                            <i class="fas fa-circle"></i> Live Data
+                        </span>
+                        <span class="badge badge-secure">
+                            <i class="fas fa-shield-alt"></i> Secure
+                        </span>
+                        <span class="badge badge-insights">
+                            <i class="fas fa-lightbulb"></i> AI-Powered Insights
+                        </span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="last-updated" id="last-updated">
+                        <i class="fas fa-clock"></i>
+                        <span>Last updated: Loading...</span>
+                    </div>
+                    <div class="connection-status">
+                        <span class="status-indicator status-connected"></span>
+                        <span class="status-text">Connected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Amazon-style Controls Bar -->
+        <div class="controls-bar">
+            <div class="controls-left">
+                <div class="control-group">
+                    <button class="control-btn primary" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Refresh</span>
+                    </button>
+                    <div class="btn-group">
+                        <button class="control-btn secondary" onclick="exportReport('json')">
+                            <i class="fas fa-download"></i>
+                            <span>Export JSON</span>
+                        </button>
+                        <button class="control-btn secondary" onclick="exportReport('csv')">
+                            <i class="fas fa-file-csv"></i>
+                            <span>Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="controls-right">
+                <div class="nps-prompt" id="nps-prompt" style="display: none;">
+                    <button class="control-btn accent" onclick="showNPSSurvey()">
+                        <i class="fas fa-star"></i>
+                        <span>Rate Experience</span>
+                    </button>
+                </div>
+                <div class="view-toggle">
+                    <button class="toggle-btn active" data-view="overview">
+                        <i class="fas fa-th-large"></i> Overview
+                    </button>
+                    <button class="toggle-btn" data-view="detailed">
+                        <i class="fas fa-list"></i> Detailed
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Error Display -->
+        <div class="error-message" id="error-message" style="display: none;">
+            <div class="error-content">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div class="error-text"></div>
+                <button class="error-close" onclick="hideErrorMessage()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Enhanced Loading State -->
+        <div class="loading-overlay" id="loading-state">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <h3>Loading Analytics Dashboard</h3>
+                <p>Fetching real-time business metrics...</p>
+                <div class="loading-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <span class="progress-text">Connecting to Firebase...</span>
+                </div>
+                <div class="loading-actions">
+                    <button class="loading-refresh-btn" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh Now
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Metrics Overview -->
+        <section class="metrics-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Key Performance Indicators
+                </h2>
+                <p class="section-subtitle">Essential business metrics at a glance</p>
+            </div>
+
+            <div class="metrics-grid" id="key-metrics" style="display: none;">
+                <div class="metric-card revenue">
+                    <div class="metric-header">
+                        <div class="metric-icon revenue">
+                            <i class="fas fa-rupee-sign"></i>
+                        </div>
+                        <div class="metric-badge">
+                            <i class="fas fa-trending-up"></i>
+                        </div>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-title">Total Revenue</div>
+                        <div class="metric-value" id="total-revenue">₹0</div>
+                        <div class="metric-change positive" id="revenue-change">
+                            <i class="fas fa-arrow-up"></i> +12.5% from last month
+                        </div>
+                    </div>
+                    <div class="metric-footer">
+                        <div class="metric-trend">
+                            <canvas class="mini-chart" id="revenue-mini-chart" width="80" height="30"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card customers">
+                    <div class="metric-header">
+                        <div class="metric-icon customers">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="metric-badge">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-title">Total Customers</div>
+                        <div class="metric-value" id="total-customers">0</div>
+                        <div class="metric-change positive" id="customers-change">
+                            <i class="fas fa-arrow-up"></i> +8.2% from last month
+                        </div>
+                    </div>
+                    <div class="metric-footer">
+                        <div class="metric-trend">
+                            <canvas class="mini-chart" id="customers-mini-chart" width="80" height="30"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card orders">
+                    <div class="metric-header">
+                        <div class="metric-icon orders">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="metric-badge">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-title">Average CLV</div>
+                        <div class="metric-value" id="avg-clv">₹0</div>
+                        <div class="metric-change neutral" id="clv-change">
+                            <i class="fas fa-minus"></i> Stable trend
+                        </div>
+                    </div>
+                    <div class="metric-footer">
+                        <div class="metric-trend">
+                            <canvas class="mini-chart" id="clv-mini-chart" width="80" height="30"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card nps">
+                    <div class="metric-header">
+                        <div class="metric-icon nps">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="metric-badge">
+                            <i class="fas fa-thumbs-up"></i>
+                        </div>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-title">NPS Score</div>
+                        <div class="metric-value" id="nps-score">0</div>
+                        <div class="metric-change positive" id="nps-change">
+                            <i class="fas fa-arrow-up"></i> +5.2% improvement
+                        </div>
+                    </div>
+                    <div class="metric-footer">
+                        <div class="metric-gauge">
+                            <div class="gauge-container">
+                                <div class="gauge-bg"></div>
+                                <div class="gauge-fill" id="nps-gauge-fill"></div>
+                                <div class="gauge-value" id="nps-gauge-text">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Revenue Analytics Section -->
+        <div class="chart-container">
+            <h3 class="chart-title">
+                <i class="fas fa-chart-line"></i> Revenue Analytics & Trends
+            </h3>
+            <div class="section-description">
+                Comprehensive revenue analysis including monthly, weekly, and daily trends
+            </div>
+            <div class="revenue-analytics-grid">
+                <div class="revenue-metric">
+                    <div class="metric-icon-small">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div>
+                        <div class="metric-title">Monthly Revenue</div>
+                        <div class="metric-value" id="monthly-revenue">₹0</div>
+                        <div class="metric-subtitle" id="monthly-growth">+15.3% growth</div>
+                    </div>
+                </div>
+                <div class="revenue-metric">
+                    <div class="metric-icon-small">
+                        <i class="fas fa-calendar-week"></i>
+                    </div>
+                    <div>
+                        <div class="metric-title">Weekly Revenue</div>
+                        <div class="metric-value" id="weekly-revenue">₹0</div>
+                        <div class="metric-subtitle" id="weekly-growth">+8.7% growth</div>
+                    </div>
+                </div>
+                <div class="revenue-metric">
+                    <div class="metric-icon-small">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div>
+                        <div class="metric-title">Average Order Value</div>
+                        <div class="metric-value" id="avg-order-value">₹0</div>
+                        <div class="metric-subtitle" id="aov-trend">+3.2% increase</div>
+                    </div>
+                </div>
+                <div class="revenue-metric">
+                    <div class="metric-icon-small">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div>
+                        <div class="metric-title">Total Orders</div>
+                        <div class="metric-value" id="total-orders">0</div>
+                        <div class="metric-subtitle" id="orders-trend">+12.1% growth</div>
+                    </div>
+                </div>
+            </div>
+            <div class="revenue-chart-section">
+                <h4>Revenue Trend Analysis</h4>
+                <div class="chart-wrapper" style="position: relative; height: 250px; width: 100%;">
+                    <canvas id="revenue-chart" style="max-width: 100%; height: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Segmentation (RFM) Section -->
+        <div class="chart-container">
+            <h3 class="chart-title">
+                <i class="fas fa-users-cog"></i> Customer Segmentation (RFM Analysis)
+            </h3>
+            <div class="section-description">
+                Customer segments based on Recency, Frequency, and Monetary value analysis
+            </div>
+            <div class="segmentation-grid" id="rfm-segments">
+                <div class="segment-card champions">
+                    <div class="segment-name">Champions</div>
+                    <div class="segment-count" id="rfm-champions">0</div>
+                    <div class="segment-percentage">High-value, frequent customers</div>
+                </div>
+                <div class="segment-card loyal">
+                    <div class="segment-name">Loyal Customers</div>
+                    <div class="segment-count" id="rfm-loyalCustomers">0</div>
+                    <div class="segment-percentage">Regular customers with good recency</div>
+                </div>
+                <div class="segment-card potential">
+                    <div class="segment-name">Potential Loyalists</div>
+                    <div class="segment-count" id="rfm-potentialLoyalists">0</div>
+                    <div class="segment-percentage">High value, need more frequency</div>
+                </div>
+                <div class="segment-card new">
+                    <div class="segment-name">New Customers</div>
+                    <div class="segment-count" id="rfm-newCustomers">0</div>
+                    <div class="segment-percentage">Recently joined customers</div>
+                </div>
+                <div class="segment-card promising">
+                    <div class="segment-name">Promising</div>
+                    <div class="segment-count" id="rfm-promising">0</div>
+                    <div class="segment-percentage">Recent activity, growing potential</div>
+                </div>
+                <div class="segment-card needs-attention">
+                    <div class="segment-name">Needs Attention</div>
+                    <div class="segment-count" id="rfm-needsAttention">0</div>
+                    <div class="segment-percentage">Require engagement to prevent churn</div>
+                </div>
+                <div class="segment-card at-risk">
+                    <div class="segment-name">At Risk</div>
+                    <div class="segment-count" id="rfm-atRisk">0</div>
+                    <div class="segment-percentage">High value but at risk of churn</div>
+                </div>
+                <div class="segment-card hibernating">
+                    <div class="segment-name">Hibernating</div>
+                    <div class="segment-count" id="rfm-hibernating">0</div>
+                    <div class="segment-percentage">Low activity, need reactivation</div>
+                </div>
+                <div class="segment-card about-to-sleep">
+                    <div class="segment-name">About to Sleep</div>
+                    <div class="segment-count" id="rfm-aboutToSleep">0</div>
+                    <div class="segment-percentage">Need immediate attention</div>
+                </div>
+                <div class="segment-card cant-lose">
+                    <div class="segment-name">Can't Lose</div>
+                    <div class="segment-count" id="rfm-cantLoseThem">0</div>
+                    <div class="segment-percentage">High-value customers at risk</div>
+                </div>
+                <div class="segment-card lost">
+                    <div class="segment-name">Lost</div>
+                    <div class="segment-count" id="rfm-lost">0</div>
+                    <div class="segment-percentage">Require win-back campaigns</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Lifetime Value & Insights Section -->
+        <div class="chart-container">
+            <h3 class="chart-title">
+                <i class="fas fa-gem"></i> Customer Tier Distribution & Insights
+            </h3>
+            <div class="section-description">
+                Customer tier analysis showing Gold, Silver, and Bronze customer segments with lifetime value insights
+            </div>
+            <div class="revenue-analytics-grid">
+                <div class="revenue-metric">
+                    <div class="metric-icon-small" style="background: linear-gradient(135deg, #067d62, #056b53);">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <div>
+                        <div class="metric-title">Top Tier Customers</div>
+                        <div class="metric-value" id="top-tier-count">0</div>
+                        <div class="metric-subtitle">VIP customer count</div>
+                    </div>
+                </div>
+                <div class="revenue-metric">
+                    <div class="metric-icon-small" style="background: linear-gradient(135deg, #ff9900, #e68900);">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <div class="metric-title">Avg. Retention Rate</div>
+                        <div class="metric-value" id="retention-rate">0%</div>
+                        <div class="metric-subtitle">Customer loyalty metric</div>
+                    </div>
+                </div>
+                <div class="revenue-metric">
+                    <div class="metric-icon-small" style="background: linear-gradient(135deg, #146eb4, #0073bb);">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <div>
+                        <div class="metric-title">Conversion Rate</div>
+                        <div class="metric-value" id="conversion-rate">0%</div>
+                        <div class="metric-subtitle">Purchase conversion</div>
+                    </div>
+                </div>
+                <div class="revenue-metric">
+                    <div class="metric-icon-small" style="background: linear-gradient(135deg, #232f3e, #37475a);">
+                        <i class="fas fa-shopping-bag"></i>
+                    </div>
+                    <div>
+                        <div class="metric-title">Repeat Purchase Rate</div>
+                        <div class="metric-value" id="repeat-rate">0%</div>
+                        <div class="metric-subtitle">Customer return rate</div>
+                    </div>
+                </div>
+            </div>
+            <div class="revenue-chart-section">
+                <h4>Customer Tier Distribution Analysis</h4>
+                <div class="chart-wrapper clv-chart-large" style="position: relative; height: 350px; width: 100%;">
+                    <canvas id="clv-chart" style="max-width: 100%; height: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Orders Section -->
+        <div class="chart-container">
+            <h3 class="chart-title">
+                <i class="fas fa-clock"></i> Recent Activity & Orders
+            </h3>
+            <div class="section-description">
+                Real-time activity monitoring and recent order insights
+            </div>
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: #0f1111; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600;">Daily Activity Trend</h4>
+                <div class="chart-wrapper activity-chart-enhanced" style="position: relative; height: 320px; width: 100%;">
+                    <canvas id="activity-chart" style="max-width: 100%; height: 100%;"></canvas>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                <div>
+                    <h4 style="color: #0f1111; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600;">Recent Orders</h4>
+                    <div class="orders-list" id="recent-orders-list">
+                        <!-- Recent orders will be populated here -->
+                    </div>
+                </div>
+                <div>
+                    <h4 style="color: #0f1111; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600;">Top Products</h4>
+                    <div class="products-list" id="top-products-list">
+                        <!-- Top products will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NPS Survey Modal -->
+    <div id="nps-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" onclick="closeModal('nps-modal')">&times;</span>
+            <h3>Rate Your Experience</h3>
+            <p>How likely are you to recommend FlashMart to a friend or colleague?</p>
+
+            <div class="nps-scale">
+                <div class="nps-labels">
+                    <span>Not likely</span>
+                    <span>Very likely</span>
+                </div>
+                <div class="nps-buttons">
+                    <!-- NPS buttons will be generated by JavaScript -->
+                </div>
+            </div>
+
+            <div class="nps-feedback" id="nps-feedback" style="display: none;">
+                <label for="nps-comments">Tell us more (optional):</label>
+                <textarea id="nps-comments" rows="3" placeholder="Your feedback helps us improve..."></textarea>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="submitNPSResponse()">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Firebase Configuration -->
+    <script>
+        // Make Firebase config available globally
+        window.FIREBASE_CONFIG = {
+            apiKey: "AIzaSyB1hYkS2ucpOKdJWcOziJJ5kaT30b-eKow",
+            authDomain: "flash-39282.firebaseapp.com",
+            projectId: "flash-39282",
+            storageBucket: "flash-39282.appspot.com",
+            messagingSenderId: "570627577471",
+            appId: "1:570627577471:web:6e7a91ff2f62d6bda9d14a",
+            measurementId: "G-SEHDJR5NSP"
+        };
+    </script>
+    <script src="firebase-config.js"></script>
+    <script src="scripts/firebase.js"></script>
+    <script src="scripts/business-metrics-service.js"></script>
+    <script src="scripts/business-dashboard.js"></script>
+</body>
+</html>

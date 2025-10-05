@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Orders Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .order-card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .btn { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #005a87; }
+    </style>
+</head>
+<body>
+    <h1>Orders Page Test</h1>
+    <button class="btn" onclick="loadOrders()">Load Orders</button>
+    <button class="btn" onclick="addSampleOrders()">Add Sample Orders</button>
+    <div id="orders-container">
+        <!-- Orders will be displayed here -->
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="scripts/firebase-test.js"></script>
+    <script src="scripts/firestore-setup.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/firebase-data-service.js"></script>
+    <script src="scripts/queue-service.js"></script>
+    <script src="scripts/cart.js"></script>
+    <script>
+        function loadOrders() {
+            console.log('Loading orders...');
+            
+            if (typeof dataManager === 'undefined') {
+                document.getElementById('orders-container').innerHTML = '<p style="color: red;">dataManager not loaded</p>';
+                return;
+            }
+            
+            const orders = dataManager.getUserOrders('demo-user-1');
+            console.log('Found orders:', orders.length);
+            
+            const container = document.getElementById('orders-container');
+            if (orders.length === 0) {
+                container.innerHTML = '<p>No orders found. Click "Add Sample Orders" first.</p>';
+            } else {
+                container.innerHTML = orders.map(order => 
+                    `<div class="order-card">
+                        <h3>Order #${order.id}</h3>
+                        <p><strong>Total:</strong> ₹${order.total}</p>
+                        <p><strong>Items:</strong> ${order.items.length}</p>
+                        <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+                        <p><strong>Status:</strong> ${order.status}</p>
+                    </div>`
+                ).join('');
+            }
+        }
+
+        function addSampleOrders() {
+            console.log('Adding sample orders...');
+            
+            if (typeof dataManager === 'undefined') {
+                document.getElementById('orders-container').innerHTML = '<p style="color: red;">dataManager not loaded</p>';
+                return;
+            }
+            
+            dataManager.addSampleOrders();
+            console.log('Sample orders added');
+            
+            // Reload orders
+            setTimeout(loadOrders, 100);
+        }
+
+        // Auto-load on page load
+        window.addEventListener('load', function() {
+            console.log('Page loaded, waiting for scripts...');
+            setTimeout(() => {
+                console.log('Scripts should be loaded now');
+                console.log('dataManager:', typeof dataManager);
+                console.log('authManager:', typeof authManager);
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
